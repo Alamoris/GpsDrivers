@@ -54,27 +54,29 @@ class GPSDriverNMEA : public GPSHelper
 {
 public:
     GPSDriverNMEA(GPSCallbackPtr callback, void *callback_user, struct vehicle_gps_position_s *gps_position);
-    
+
     int receive(unsigned timeout);
     int configure(unsigned &baudrate, OutputMode output_mode);
 
 private:
-    int parse_search_byte{};
-    int buf_search_byte{0};
+    int len_counter{-1};
+    int parse_byte{};
     int buffer_start{0};
+    int msg_start{-1};
+    int msg_end{-1};
 
 	unsigned char coma_point{};
 	unsigned char char_point{};
-    
+
     char msg_type[4] = {'P', 'G', 'G', 'A'};
-	
+
     char latitude[16]{};
 	char longitude[12]{};
     char altitude[12]{};
 	char UNUSED[32]{};
 	char *const GGA[15] = {UNUSED, latitude, UNUSED, longitude, UNUSED, UNUSED, UNUSED, UNUSED, altitude, UNUSED, UNUSED, UNUSED, UNUSED, UNUSED};
 
-    int decode(char *buf, int mes_start, int mes_stop);
+    int decode(char *buf);
     struct vehicle_gps_position_s *_gps_position {nullptr};
 
     void decodeInit();
