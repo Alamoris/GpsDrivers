@@ -39,22 +39,15 @@
 
 
 #include "gps_helper.h"
+#include "../../definitions.h"
 
 #define NMEA_BAUDRATE 57600
-
-typedef struct {
-    int32_t latitude;
-    int32_t longitude;
-    uint8_t satellites;
-    uint16_t hdop;
-    uint16_t utc_time;
-} nmea_message;
 
 class GPSDriverNMEA : public GPSHelper
 {
 public:
     GPSDriverNMEA(GPSCallbackPtr callback, void *callback_user, struct vehicle_gps_position_s *gps_position);
-    
+
     int receive(unsigned timeout);
     int configure(unsigned &baudrate, OutputMode output_mode);
 
@@ -63,19 +56,21 @@ private:
     int buf_search_byte{0};
     int buffer_start{0};
 
-	unsigned char coma_point{};
-	unsigned char char_point{};
-    
+    unsigned char coma_point{};
+    unsigned char char_point{};
+
+    char message[80];
+    int message_char_iter = 0;
+    bool find_message = 0;
+
     char msg_type[4] = {'P', 'G', 'G', 'A'};
-	
+
     char latitude[16]{};
-	char longitude[12]{};
+    char longitude[12]{};
     char altitude[12]{};
-	char UNUSED[32]{};
-	char *const GGA[15] = {UNUSED, latitude, UNUSED, longitude, UNUSED, UNUSED, UNUSED, UNUSED, altitude, UNUSED, UNUSED, UNUSED, UNUSED, UNUSED};
+    char UNUSED[32]{};
+    char *const GGA[15] = {UNUSED, latitude, UNUSED, longitude, UNUSED, UNUSED, UNUSED, UNUSED, altitude, UNUSED, UNUSED, UNUSED, UNUSED, UNUSED};
 
-    int decode(char *buf, int mes_start, int mes_stop);
+    int decode(char *message);
     struct vehicle_gps_position_s *_gps_position {nullptr};
-
-    void decodeInit();
 };

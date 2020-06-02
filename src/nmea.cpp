@@ -53,7 +53,6 @@ GPSDriverNMEA::GPSDriverNMEA(GPSCallbackPtr callback, void *callback_user, struc
 	GPSHelper(callback, callback_user),
 	_gps_position(gps_position)
 {
-	decodeInit();
 }
 
 int
@@ -83,62 +82,29 @@ GPSDriverNMEA::receive(unsigned timeout)
 {
 	char buf[GPS_READ_BUFFER_SIZE];
 
-	//int time_start = hrt_absolute_time();
-
-	/*int msg_start = -1;
-	int msg_end = -1;
-	int len_counter = -1;*/
 	int j = 0;
-	//buffer_start = buf_search_byte;
 
 	int ret = read((uint8_t*)buf, sizeof(buf), timeout);
-	//PX4_INFO("Read buffer size: %d", ret);
-	
+	PX4_INFO("Read buffer size: %d", ret);
+
 	if (ret > 0) {
+		PX4_INFO("%s", buf);
 		while (j < ret) {
-			if (ret == 77) {
-				if (decode(buf, buf_search_byte, 77)) {
-					return 1;
-				} else {
-					return 0;
-				}
+			if (buf[j] == '$') {
+				find_message = true;
 			}
-			//PX4_INFO("Buffer serach index: %d", buf_search_byte);
-			/*if (buf[buf_search_byte] == '$') {
-				PX4_INFO("Find start simbol $");
-				//PX4_INFO("String: %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c", (char)buf[buf_search_byte+0], (char)buf[buf_search_byte+1], (char)buf[buf_search_byte+2], (char)buf[buf_search_byte+3], (char)buf[buf_search_byte+4], (char)buf[buf_search_byte+5], (char)buf[buf_search_byte+6], (char)buf[buf_search_byte+7], (char)buf[buf_search_byte+8], (char)buf[buf_search_byte+9], (char)buf[buf_search_byte+10], (char)buf[buf_search_byte+11], (char)buf[buf_search_byte+12], (char)buf[buf_search_byte+13], (char)buf[buf_search_byte+14], (char)buf[buf_search_byte+15], (char)buf[buf_search_byte+16], (char)buf[buf_search_byte+17], (char)buf[buf_search_byte+18], (char)buf[buf_search_byte+19], (char)buf[buf_search_byte+20], (char)buf[buf_search_byte+21], (char)buf[buf_search_byte+22], (char)buf[buf_search_byte+23], (char)buf[buf_search_byte+24], (char)buf[buf_search_byte+25], (char)buf[buf_search_byte+26], (char)buf[buf_search_byte+27], (char)buf[buf_search_byte+28], (char)buf[buf_search_byte+29], (char)buf[buf_search_byte+30], (char)buf[buf_search_byte+31], (char)buf[buf_search_byte+32], (char)buf[buf_search_byte+33], (char)buf[buf_search_byte+34], (char)buf[buf_search_byte+35], (char)buf[buf_search_byte+36], (char)buf[buf_search_byte+37], (char)buf[buf_search_byte+38], (char)buf[buf_search_byte+39], (char)buf[buf_search_byte+40], (char)buf[buf_search_byte+41], (char)buf[buf_search_byte+42], (char)buf[buf_search_byte+43], (char)buf[buf_search_byte+44], (char)buf[buf_search_byte+45], (char)buf[buf_search_byte+46], (char)buf[buf_search_byte+47], (char)buf[buf_search_byte+48], (char)buf[buf_search_byte+49], (char)buf[buf_search_byte+50], (char)buf[buf_search_byte+51], (char)buf[buf_search_byte+52], (char)buf[buf_search_byte+53], (char)buf[buf_search_byte+54], (char)buf[buf_search_byte+55], (char)buf[buf_search_byte+56], (char)buf[buf_search_byte+57], (char)buf[buf_search_byte+58], (char)buf[buf_search_byte+59], (char)buf[buf_search_byte+60], (char)buf[buf_search_byte+61], (char)buf[buf_search_byte+62], (char)buf[buf_search_byte+63], (char)buf[buf_search_byte+64], (char)buf[buf_search_byte+65], (char)buf[buf_search_byte+66], (char)buf[buf_search_byte+67], (char)buf[buf_search_byte+68], (char)buf[buf_search_byte+69], (char)buf[buf_search_byte+70], (char)buf[buf_search_byte+71], (char)buf[buf_search_byte+72]);
-				len_counter = 0;
-				msg_start = buf_search_byte;
-			} else if (buf[buf_search_byte] == '*') {
-				PX4_INFO("Find end simbol *. Message size: %d", (int)len_counter);
-				if (len_counter != -1) {
-					msg_end = buf_search_byte;
-				}
+
+			if (find_message) {
+				message[message_char_iter] = buf[j];
+				message_char_iter += 1;
 			}
-			len_counter++;
-			//PX4_INFO("Search iteration with, search_byte/buf_value: %d, %c", buf_search_byte, (char)buf[buf_search_byte]);
 
-			if (msg_start > -1 && msg_end > -1 && len_counter == 73) {
-				buffer_start = (buffer_start + ret) % GPS_READ_BUFFER_SIZE;
-
-				PX4_INFO("Try decode with, start, stop: %d, %d", msg_start, msg_end);
-				buf_search_byte = buffer_start;
-				if (decode(buf, msg_start, len_counter)) {
-					len_counter = -1;
-					msg_start = -1;
-					msg_end = -1;
-					PX4_INFO("Succesful decode");
-					return 1;
-				} else {
-					len_counter = -1;
-					msg_start = -1;
-					msg_end = -1;
-					return 0;
-				}
+			if (buf[j] == '*') {
+				decode(message);
+				message_char_iter = 0;
+				find_message = false;
 			}
-			
 
-			buf_search_byte = (buf_search_byte + 1) % GPS_READ_BUFFER_SIZE;*/
 			j++;
 		}
 		buf_search_byte += ret;
@@ -150,30 +116,30 @@ GPSDriverNMEA::receive(unsigned timeout)
 
 
 int
-GPSDriverNMEA::decode(char *message, int msg_start, int message_len) {
+GPSDriverNMEA::decode(char *_message) {
 	parse_search_byte = 0;
 
-	if (message[parse_search_byte + msg_start] == '$') {
+	if (_message[parse_search_byte] == '$') {
 		coma_point = 0xff;
 		char_point = 0;
 	}
 
-	while (parse_search_byte < message_len) {
+	while (_message[parse_search_byte] != '*') {
 		if (parse_search_byte < 6 && parse_search_byte > 1){
-			if (message[parse_search_byte + msg_start] != msg_type[parse_search_byte - 2]) {
+			if (_message[parse_search_byte] != msg_type[parse_search_byte - 2]) {
 				PX4_INFO("Out from decode");
 				return 0;
 			}
 		}
 
 		//PX4_INFO("Working char: %c", (char)message[parse_search_byte + msg_start]);
-		if (message[parse_search_byte + msg_start] == ',') {
+		if (_message[parse_search_byte] == ',') {
 			coma_point++;
 			char_point = 0;
-		} else if (message[parse_search_byte + msg_start] == '*') {
+		} else if (_message[parse_search_byte] == '*') {
 			break;
 		} else {
-			GGA[coma_point][char_point++] = message[parse_search_byte + msg_start];
+			GGA[coma_point][char_point++] = message[parse_search_byte];
 		}
 
 		parse_search_byte++;
@@ -186,8 +152,8 @@ GPSDriverNMEA::decode(char *message, int msg_start, int message_len) {
 	//PX4_INFO("Lat, lon, alt, values: %8.6f, %8.6f, %8.6f", (double)lat, (double)lon, (double)alt);
 	/*Handling message*/
 	_gps_position->timestamp = hrt_absolute_time();
-	_gps_position->lat = lat * 1e7;
-	_gps_position->lon = lon * 1e7;
+	_gps_position->lat = lat * 1e5;
+	_gps_position->lon = lon * 1e5;
 	_gps_position->alt = alt;
 
 	_gps_position->fix_type = 3;
@@ -196,10 +162,4 @@ GPSDriverNMEA::decode(char *message, int msg_start, int message_len) {
 	_gps_position->satellites_used = 8;
 
 	return 1;
-}
-
-void
-GPSDriverNMEA::decodeInit()
-{
-	
 }
